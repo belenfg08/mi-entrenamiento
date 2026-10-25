@@ -1,10 +1,11 @@
+/* Siempre en lila claro, aunque el dispositivo esté en modo oscuro. */
 :root {
-  --bg: #f7f4fc;
+  --bg: #efe6fc;
   --surface: #ffffff;
-  --surface-2: #f1ecf9;
+  --surface-2: #f5effd;
   --text: #1f1830;
   --muted: #675d78;
-  --border: #e2d9f0;
+  --border: #ddd0f2;
   --accent: #7e57c2;
   --accent-text: #ffffff;
   --accent-soft: #ece3fa;
@@ -18,28 +19,8 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #14101b;
-    --surface: #1d1727;
-    --surface-2: #271f34;
-    --text: #ede8f5;
-    --muted: #a99fbb;
-    --border: #3a3049;
-    --accent: #c4a7f5;
-    --accent-text: #1d1230;
-    --accent-soft: #352850;
-    --gym: #60a5fa;
-    --mat: #f472b6;
-    --food: #fbbf24;
-    --danger: #f97066;
-    --danger-soft: #3b1714;
-    --shadow: none;
-    color-scheme: dark;
-  }
-}
-
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 
 html { -webkit-text-size-adjust: 100%; }
 
@@ -207,6 +188,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 #belt-details summary::-webkit-details-marker { display: none; }
 #belt-details[open] summary { margin-bottom: 4px; }
 #belt-preview svg { max-width: 220px; }
+#belt-cancel { width: 100%; margin-top: 8px; }
 .belt-mini { display: flex; gap: 14px; align-items: center; }
 .belt-mini svg { width: 120px; flex: none; }
 .grad-item { display: flex; align-items: center; gap: 12px; padding: 8px 0; border-bottom: 1px solid var(--border); }

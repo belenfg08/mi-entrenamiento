@@ -63,17 +63,18 @@
               <label class="field">Fecha<input type="date" name="date" required></label>
               <label class="field">Faixa
                 <select name="belt">
-                  <option value="blanca">Blanca</option>
+                  <option value="blanca">Blanca (branca)</option>
                   <option value="azul">Azul</option>
-                  <option value="morada">Morada</option>
-                  <option value="marron">Marrón</option>
-                  <option value="negra">Negra</option>
+                  <option value="morada">Morada (roxa)</option>
+                  <option value="marron">Marrón (marrom)</option>
+                  <option value="negra">Negra (preta)</option>
                 </select>
               </label>
             </div>
             <label class="field">Grados<select name="stripes"></select></label>
             <div id="belt-preview" class="belt"></div>
-            <button type="submit" class="btn primary">Guardar graduación</button>
+            <button type="submit" class="btn primary" id="belt-submit">Guardar graduación</button>
+            <button type="button" class="btn small" id="belt-cancel" hidden>Cancelar edición</button>
           </form>
         </details>
         <div id="belt-history"></div>

@@ -10,11 +10,11 @@
   var MEALS = ['Desayuno', 'Almuerzo', 'Once', 'Cena', 'Colación'];
   // Faixas de adulto de BJJ. La negra lleva la barra roja y hasta 6 grados.
   var BELTS = [
-    { id: 'blanca', name: 'Blanca', color: '#f4f4f5', bar: '#18181b', max: 4 },
-    { id: 'azul', name: 'Azul', color: '#1d4ed8', bar: '#18181b', max: 4 },
-    { id: 'morada', name: 'Morada', color: '#7e22ce', bar: '#18181b', max: 4 },
-    { id: 'marron', name: 'Marrón', color: '#7c2d12', bar: '#18181b', max: 4 },
-    { id: 'negra', name: 'Negra', color: '#18181b', bar: '#dc2626', max: 6 }
+    { id: 'blanca', name: 'Blanca', pt: 'branca', color: '#f4f4f5', bar: '#18181b', max: 4 },
+    { id: 'azul', name: 'Azul', pt: '', color: '#1d4ed8', bar: '#18181b', max: 4 },
+    { id: 'morada', name: 'Morada', pt: 'roxa', color: '#7e22ce', bar: '#18181b', max: 4 },
+    { id: 'marron', name: 'Marrón', pt: 'marrom', color: '#7c2d12', bar: '#18181b', max: 4 },
+    { id: 'negra', name: 'Negra', pt: 'preta', color: '#18181b', bar: '#dc2626', max: 6 }
   ];
   var DEFAULT_EXERCISES = ['Sentadilla', 'Peso muerto', 'Press banca', 'Press militar', 'Dominadas',
     'Remo con barra', 'Fondos', 'Hip thrust', 'Zancadas', 'Flexiones', 'Kettlebell swing', 'Abdominales'];
@@ -273,14 +273,16 @@
   // ---------- Faixas (graduaciones de BJJ) ----------
 
   var beltForm = $('#belt-form');
+  var editingGradId = null; // graduación que se está corrigiendo, o null si es nueva
 
   function beltInfo(id) { return BELTS.find(function (b) { return b.id === id; }) || BELTS[0]; }
+  function beltName(id) { var b = beltInfo(id); return b.name + (b.pt ? ' (' + b.pt + ')' : ''); }
   function stripesLabel(n) { return n === 0 ? 'sin grados' : n === 1 ? '1 grado' : n + ' grados'; }
-  function beltLabel(g) { return 'Faixa ' + beltInfo(g.belt).name.toLowerCase() + ' · ' + stripesLabel(g.stripes); }
+  function beltLabel(g) { return 'Faixa ' + beltName(g.belt).toLowerCase() + ' · ' + stripesLabel(g.stripes); }
 
   function beltSvg(id, stripes) {
     var b = beltInfo(id);
-    var edge = id === 'blanca' ? ' stroke="#a1a1aa" stroke-width="1.5"' : '';
+    var edge = id === 'blanca' || id === 'negra' ? ' stroke="#71717a" stroke-width="1.5"' : '';
     var s = '';
     for (var i = 0; i < stripes; i++) s += '<rect x="' + (212 + i * 11) + '" y="9" width="6" height="30" fill="#ffffff"/>';
     return '<svg viewBox="0 0 300 48" role="img" aria-label="Faixa ' + b.name.toLowerCase() + ' con ' + stripesLabel(stripes) + '">' +
@@ -304,6 +306,9 @@
 
   // Propone la siguiente graduación: un grado más o la faixa siguiente.
   function resetBeltForm() {
+    editingGradId = null;
+    $('#belt-submit').textContent = 'Guardar graduación';
+    $('#belt-cancel').hidden = true;
     var cur = currentGraduation();
     var belt = 'blanca', stripes = 0;
     if (cur) {
@@ -320,19 +325,36 @@
   field(beltForm, 'belt').addEventListener('change', function () { fillStripes(+field(beltForm, 'stripes').value); });
   field(beltForm, 'stripes').addEventListener('change', function () { fillStripes(+field(beltForm, 'stripes').value); });
 
+  function editGraduation(id) {
+    var g = data.graduations.find(function (x) { return x.id === id; });
+    if (!g) return;
+    editingGradId = id;
+    field(beltForm, 'date').value = g.date;
+    field(beltForm, 'belt').value = g.belt;
+    fillStripes(g.stripes);
+    $('#belt-submit').textContent = 'Guardar cambios';
+    $('#belt-cancel').hidden = false;
+    $('#belt-details').open = true;
+    $('#belt-details').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  $('#belt-cancel').addEventListener('click', function () { resetBeltForm(); $('#belt-details').open = false; });
+
   beltForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    data.graduations.push({
-      id: uid(), created: Date.now(),
+    var values = {
       date: field(beltForm, 'date').value || today(),
       belt: field(beltForm, 'belt').value,
       stripes: num(field(beltForm, 'stripes').value)
-    });
+    };
+    var editing = editingGradId && data.graduations.find(function (x) { return x.id === editingGradId; });
+    if (editing) Object.assign(editing, values);
+    else data.graduations.push(Object.assign({ id: uid(), created: Date.now() }, values));
     save();
     $('#belt-details').open = false;
     renderAll();
     resetBeltForm();
-    toast('¡Felicitaciones por tu graduación! 🥋');
+    toast(editing ? 'Faixa actualizada 🥋' : '¡Felicitaciones por tu graduación! 🥋');
   });
 
   function bjjSince(date) {
@@ -347,7 +369,8 @@
       $('#belt-current').innerHTML = beltSvg(cur.belt, cur.stripes) +
         '<p class="belt-name">' + beltLabel(cur) + '</p>' +
         '<p class="muted small">Desde el ' + fmtDateLong(cur.date) + ' · ' + since.length + (since.length === 1 ? ' clase' : ' clases') +
-        ' de BJJ y ' + fmtNum(hours, 1) + ' h desde entonces</p>';
+        ' de BJJ y ' + fmtNum(hours, 1) + ' h desde entonces</p>' +
+        '<button type="button" class="btn small" style="margin-top:8px" data-edit-grad="' + cur.id + '">✏️ Corregir faixa o grados</button>';
       $('#summary-belt').innerHTML = '<div class="card belt-mini">' + beltSvg(cur.belt, cur.stripes) +
         '<div><div class="belt-name">' + beltLabel(cur) + '</div><div class="muted small">' + since.length +
         (since.length === 1 ? ' clase' : ' clases') + ' de BJJ desde tu última graduación</div></div></div>';
@@ -361,12 +384,20 @@
     $('#belt-history').innerHTML = list.length > 0 ? '<h3 class="muted small" style="margin:16px 0 4px">Historial de graduaciones</h3>' +
       list.map(function (g) {
         return '<div class="grad-item">' + beltSvg(g.belt, g.stripes) +
-          '<div class="grow"><div>' + beltInfo(g.belt).name + ' · ' + stripesLabel(g.stripes) + '</div><div class="muted small">' + fmtDateLong(g.date) + '</div></div>' +
-          '<button type="button" class="icon-btn" data-del-grad="' + g.id + '" aria-label="Borrar graduación">🗑</button></div>';
+          '<div class="grow"><div>' + beltName(g.belt) + ' · ' + stripesLabel(g.stripes) + '</div><div class="muted small">' + fmtDateLong(g.date) + '</div></div>' +
+          '<span class="entry-actions"><button type="button" class="icon-btn" data-edit-grad="' + g.id + '" aria-label="Editar graduación">✏️</button>' +
+          '<button type="button" class="icon-btn" data-del-grad="' + g.id + '" aria-label="Borrar graduación">🗑</button></span></div>';
       }).join('') : '';
   }
 
+  $('#belt-current').addEventListener('click', function (e) {
+    var edit = e.target.closest('[data-edit-grad]');
+    if (edit) editGraduation(edit.dataset.editGrad);
+  });
+
   $('#belt-history').addEventListener('click', function (e) {
+    var edit = e.target.closest('[data-edit-grad]');
+    if (edit) { editGraduation(edit.dataset.editGrad); return; }
     var del = e.target.closest('[data-del-grad]');
     if (del && confirm('¿Borrar esta graduación?')) {
       removeById(data.graduations, del.dataset.delGrad);

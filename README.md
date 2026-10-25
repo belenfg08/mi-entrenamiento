@@ -12,7 +12,7 @@ App web personal para anotar en un solo lugar el gimnasio, las clases de jiu-jit
 
 - **Resumen semanal:** los días de la semana con lo que se registró cada día, más sesiones de gimnasio, clases, horas y combates en el tatami, promedio de calorías y proteína, y cambio de peso.
 - **Gimnasio:** ejercicios con series, repeticiones y kilos. Calcula récords y un 1RM estimado (fórmula de Epley). El botón «Repetir» carga una rutina anterior.
-- **Mi faixa:** la faixa actual de BJJ (blanca, azul, morada, marrón o negra) con sus grados, dibujada como cinturón, más el historial de graduaciones y cuántas clases y horas de BJJ van desde la última. Al registrar una graduación, la app propone la siguiente (un grado más, o la faixa siguiente después del 4.º grado).
+- **Mi faixa:** la faixa actual de BJJ (blanca, azul, morada, marrón o negra) con sus grados, dibujada como cinturón, más el historial de graduaciones y cuántas clases y horas de BJJ van desde la última. Al registrar una graduación, la app propone la siguiente (un grado más, o la faixa siguiente después del 4.º grado). Cada graduación se puede corregir (✏️) o borrar. Los nombres también aparecen en portugués (branca, roxa, marrom, preta).
 - **Tatami (BJJ con gi, sin gi, lucha, open mat):** duración, combates, técnicas vistas, qué salió bien, qué repasar, cansancio (1-10) y molestias. Tiene buscador.
 - **Comida:** alimentos por momento del día, con barras de avance hacia la meta de calorías y proteína, y accesos rápidos a lo que más se repite.
 - **Peso:** un registro por día, con gráfico e historial.
