@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mi Entrenamiento</title>
   <meta name="description" content="Registro personal de gimnasio, jiu-jitsu, lucha, alimentación y peso.">
-  <meta name="theme-color" content="#7e57c2">
+  <meta name="theme-color" content="#6d28d9">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -43,6 +43,12 @@
         <div id="gym-exercises"></div>
         <button type="button" class="btn secondary" id="add-exercise">+ Ejercicio</button>
         <label class="field">Notas<textarea name="notes" rows="2" placeholder="Cómo te sentiste, molestias…"></textarea></label>
+        <div class="field">Fotos (opcional)
+          <div class="photo-picker" id="gym-photos">
+            <div class="thumbs"></div>
+            <label class="btn small">📷 Agregar fotos<input type="file" accept="image/*" multiple hidden></label>
+          </div>
+        </div>
         <button type="submit" class="btn primary">Guardar entrenamiento</button>
       </form>
       <h2>Récords</h2>
@@ -105,6 +111,12 @@
           <input type="range" name="effort" min="1" max="10" value="6">
         </label>
         <label class="field">Lesiones o molestias<input type="text" name="injuries" placeholder="(opcional)"></label>
+        <div class="field">Fotos (opcional)
+          <div class="photo-picker" id="mat-photos">
+            <div class="thumbs"></div>
+            <label class="btn small">📷 Agregar fotos<input type="file" accept="image/*" multiple hidden></label>
+          </div>
+        </div>
         <button type="submit" class="btn primary">Guardar clase</button>
       </form>
       <div id="mat-stats" class="cards"></div>
@@ -123,6 +135,14 @@
       <div id="food-totals" class="card"></div>
       <form id="food-form" class="card" autocomplete="off">
         <h2>Agregar comida</h2>
+        <div class="field">Buscar alimento
+          <div class="search-row">
+            <input type="search" id="food-q" placeholder="ej. yogur griego, marraqueta" enterkeyhint="search" aria-label="Buscar alimento">
+            <button type="button" class="icon-btn" id="food-q-btn" aria-label="Buscar">🔍</button>
+            <button type="button" class="icon-btn" id="food-scan" aria-label="Escanear código de barras">📷</button>
+          </div>
+        </div>
+        <div id="food-results"></div>
         <div id="food-quick" class="chips"></div>
         <label class="field">Momento
           <select name="meal">
@@ -134,6 +154,10 @@
           </select>
         </label>
         <label class="field">Alimento<input type="text" name="food" required placeholder="ej. 2 huevos + pan integral"></label>
+        <div id="food-per100" class="per100" hidden>
+          <p class="small" id="food-per100-text"></p>
+          <label class="field">Cantidad (g)<input type="number" name="grams" min="0" step="1" inputmode="numeric"></label>
+        </div>
         <div class="row2">
           <label class="field">Calorías (kcal)<input type="number" name="kcal" min="0" step="1" inputmode="numeric"></label>
           <label class="field">Proteína (g)<input type="number" name="protein" min="0" step="0.5" inputmode="decimal"></label>
@@ -145,6 +169,12 @@
 
     <!-- Peso -->
     <section id="tab-weight" class="tab" hidden>
+      <div id="hc-card" class="card" hidden>
+        <h2>Báscula (Health Connect)</h2>
+        <p class="muted small">Lee el peso que tu báscula Eufy registra en Health Connect a través de EufyLife. Se actualiza cada vez que abres la app.</p>
+        <p id="hc-status" class="small"></p>
+        <button type="button" class="btn primary" id="hc-sync">Conectar con Health Connect</button>
+      </div>
       <form id="weight-form" class="card" autocomplete="off">
         <h2>Registrar peso</h2>
         <div class="row2">
@@ -172,7 +202,7 @@
 
       <div class="card">
         <h2>Respaldo</h2>
-        <p class="muted">Tus datos se guardan <strong>solo en este dispositivo y navegador</strong>; no se envían a ningún lado. Descarga un respaldo de vez en cuando para no perderlos.</p>
+        <p class="muted">Tus datos y fotos se guardan <strong>solo en este dispositivo y navegador</strong>; no se envían a ningún lado. Descarga un respaldo de vez en cuando para no perderlos. El respaldo incluye las fotos, así que puede pesar varios MB.</p>
         <div class="btn-row">
           <button type="button" class="btn primary" id="export-btn">Descargar respaldo</button>
           <label class="btn secondary">Restaurar respaldo<input type="file" id="import-file" accept=".json,application/json" hidden></label>
@@ -204,6 +234,21 @@
   </nav>
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <div id="scanner" class="viewer scanner" hidden>
+    <div class="scanner-box">
+      <video id="scanner-video" playsinline muted></video>
+      <p id="scanner-status" class="small">Apunta la cámara al código de barras del envase.</p>
+      <div class="search-row">
+        <input type="text" id="scanner-code" inputmode="numeric" placeholder="o escribe el número del código" aria-label="Número del código de barras">
+        <button type="button" class="btn small" id="scanner-go">Buscar</button>
+      </div>
+      <button type="button" class="btn small" id="scanner-close">Cerrar</button>
+    </div>
+  </div>
+  <div id="photo-viewer" class="viewer" hidden>
+    <img alt="Foto de entrenamiento">
+    <button type="button" class="icon-btn viewer-close" aria-label="Cerrar foto">✕</button>
+  </div>
   <datalist id="exercise-names"></datalist>
 
   <template id="tpl-exercise">
@@ -226,6 +271,7 @@
     </div>
   </template>
 
+  <script src="alimentos.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
