@@ -1,0 +1,203 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Mi Entrenamiento</title>
+  <meta name="description" content="Registro personal de gimnasio, jiu-jitsu, lucha, alimentación y peso.">
+  <meta name="theme-color" content="#0f766e">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-180.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Entreno">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <h1>Mi Entrenamiento</h1>
+    <span id="today-label" class="muted"></span>
+  </header>
+
+  <main>
+    <!-- Resumen -->
+    <section id="tab-resumen" class="tab" hidden>
+      <h2>Esta semana</h2>
+      <div id="week-strip" class="week-strip"></div>
+      <div class="legend">
+        <span><i class="dot gym"></i>Gimnasio</span>
+        <span><i class="dot mat"></i>Tatami</span>
+        <span><i class="dot food"></i>Comida registrada</span>
+      </div>
+      <div id="summary-cards" class="cards"></div>
+      <h2>Para repasar en el tatami</h2>
+      <div id="summary-review"></div>
+    </section>
+
+    <!-- Gimnasio -->
+    <section id="tab-gym" class="tab" hidden>
+      <form id="gym-form" class="card" autocomplete="off">
+        <h2>Nuevo entrenamiento</h2>
+        <label class="field">Fecha<input type="date" name="date" required></label>
+        <div id="gym-exercises"></div>
+        <button type="button" class="btn secondary" id="add-exercise">+ Ejercicio</button>
+        <label class="field">Notas<textarea name="notes" rows="2" placeholder="Cómo te sentiste, molestias…"></textarea></label>
+        <button type="submit" class="btn primary">Guardar entrenamiento</button>
+      </form>
+      <h2>Récords</h2>
+      <div id="gym-records"></div>
+      <h2>Historial</h2>
+      <div id="gym-history"></div>
+    </section>
+
+    <!-- Jiu-jitsu y lucha -->
+    <section id="tab-mat" class="tab" hidden>
+      <form id="mat-form" class="card" autocomplete="off">
+        <h2>Nueva clase</h2>
+        <div class="row2">
+          <label class="field">Fecha<input type="date" name="date" required></label>
+          <label class="field">Tipo
+            <select name="type">
+              <option>BJJ con gi</option>
+              <option>BJJ sin gi</option>
+              <option>Lucha</option>
+              <option>Open mat</option>
+              <option>Otro</option>
+            </select>
+          </label>
+        </div>
+        <div class="row2">
+          <label class="field">Duración (min)<input type="number" name="minutes" min="0" step="5" value="90" inputmode="numeric"></label>
+          <label class="field">Combates (rolls)<input type="number" name="rolls" min="0" step="1" value="0" inputmode="numeric"></label>
+        </div>
+        <label class="field">Técnicas vistas<textarea name="techniques" rows="2" placeholder="ej. raspada de tijera, defensa de derribo"></textarea></label>
+        <label class="field">Me salió bien<textarea name="good" rows="2"></textarea></label>
+        <label class="field">Me falló / repasar<textarea name="review" rows="2"></textarea></label>
+        <label class="field">Cansancio: <output id="mat-effort-out">6</output>/10
+          <input type="range" name="effort" min="1" max="10" value="6">
+        </label>
+        <label class="field">Lesiones o molestias<input type="text" name="injuries" placeholder="(opcional)"></label>
+        <button type="submit" class="btn primary">Guardar clase</button>
+      </form>
+      <div id="mat-stats" class="cards"></div>
+      <h2>Historial</h2>
+      <input type="search" id="mat-search" class="search" placeholder="Buscar técnica, nota, tipo…" aria-label="Buscar en clases">
+      <div id="mat-history"></div>
+    </section>
+
+    <!-- Alimentación -->
+    <section id="tab-food" class="tab" hidden>
+      <div class="day-nav card">
+        <button type="button" class="icon-btn" id="food-prev" aria-label="Día anterior">‹</button>
+        <input type="date" id="food-day" aria-label="Día">
+        <button type="button" class="icon-btn" id="food-next" aria-label="Día siguiente">›</button>
+      </div>
+      <div id="food-totals" class="card"></div>
+      <form id="food-form" class="card" autocomplete="off">
+        <h2>Agregar comida</h2>
+        <div id="food-quick" class="chips"></div>
+        <label class="field">Momento
+          <select name="meal">
+            <option>Desayuno</option>
+            <option>Almuerzo</option>
+            <option>Once</option>
+            <option>Cena</option>
+            <option>Colación</option>
+          </select>
+        </label>
+        <label class="field">Alimento<input type="text" name="food" required placeholder="ej. 2 huevos + pan integral"></label>
+        <div class="row2">
+          <label class="field">Calorías (kcal)<input type="number" name="kcal" min="0" step="1" inputmode="numeric"></label>
+          <label class="field">Proteína (g)<input type="number" name="protein" min="0" step="0.5" inputmode="decimal"></label>
+        </div>
+        <button type="submit" class="btn primary">Agregar</button>
+      </form>
+      <div id="food-list"></div>
+    </section>
+
+    <!-- Peso -->
+    <section id="tab-weight" class="tab" hidden>
+      <form id="weight-form" class="card" autocomplete="off">
+        <h2>Registrar peso</h2>
+        <div class="row2">
+          <label class="field">Fecha<input type="date" name="date" required></label>
+          <label class="field">Peso (kg)<input type="number" name="kg" min="20" max="300" step="0.1" required inputmode="decimal"></label>
+        </div>
+        <button type="submit" class="btn primary">Guardar peso</button>
+      </form>
+      <div id="weight-chart" class="card"></div>
+      <h2>Historial</h2>
+      <div id="weight-history"></div>
+    </section>
+
+    <!-- Ajustes -->
+    <section id="tab-settings" class="tab" hidden>
+      <form id="goals-form" class="card">
+        <h2>Metas diarias</h2>
+        <div class="row2">
+          <label class="field">Calorías (kcal)<input type="number" name="kcal" min="500" max="8000" step="50" inputmode="numeric"></label>
+          <label class="field">Proteína (g)<input type="number" name="protein" min="10" max="500" step="5" inputmode="numeric"></label>
+        </div>
+        <p class="muted small">Referencia: si entrenas fuerte, la proteína suele ir entre 1,6 y 2 g por kilo de peso.</p>
+        <button type="submit" class="btn primary">Guardar metas</button>
+      </form>
+
+      <div class="card">
+        <h2>Respaldo</h2>
+        <p class="muted">Tus datos se guardan <strong>solo en este dispositivo y navegador</strong>; no se envían a ningún lado. Descarga un respaldo de vez en cuando para no perderlos.</p>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="export-btn">Descargar respaldo</button>
+          <label class="btn secondary">Restaurar respaldo<input type="file" id="import-file" accept=".json,application/json" hidden></label>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Instalar en el celular</h2>
+        <p class="muted"><strong>Android (Chrome):</strong> menú ⋮ → «Agregar a la pantalla principal».<br>
+        <strong>iPhone (Safari):</strong> botón Compartir → «Agregar a inicio».<br>
+        Después funciona sin internet.</p>
+      </div>
+
+      <div class="card">
+        <h2>Borrar todo</h2>
+        <p class="muted">Elimina todos los registros de este dispositivo. No se puede deshacer.</p>
+        <button type="button" class="btn danger" id="wipe-btn">Borrar todos mis datos</button>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tabbar" aria-label="Secciones">
+    <button type="button" data-tab="resumen"><span aria-hidden="true">📊</span>Resumen</button>
+    <button type="button" data-tab="gym"><span aria-hidden="true">🏋️</span>Gimnasio</button>
+    <button type="button" data-tab="mat"><span aria-hidden="true">🥋</span>Tatami</button>
+    <button type="button" data-tab="food"><span aria-hidden="true">🍽️</span>Comida</button>
+    <button type="button" data-tab="weight"><span aria-hidden="true">⚖️</span>Peso</button>
+    <button type="button" data-tab="settings"><span aria-hidden="true">⚙️</span>Ajustes</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <datalist id="exercise-names"></datalist>
+
+  <template id="tpl-exercise">
+    <div class="exercise">
+      <div class="exercise-head">
+        <input class="ex-name" list="exercise-names" placeholder="Ejercicio (ej. Sentadilla)" aria-label="Ejercicio">
+        <button type="button" class="icon-btn ex-remove" aria-label="Quitar ejercicio">✕</button>
+      </div>
+      <div class="set-row set-labels" aria-hidden="true"><span>#</span><span>Reps</span><span>Kg</span><span></span></div>
+      <div class="sets"></div>
+      <button type="button" class="btn small ex-add-set">+ Serie</button>
+    </div>
+  </template>
+  <template id="tpl-set">
+    <div class="set-row">
+      <span class="set-n"></span>
+      <input class="set-reps" type="number" min="0" step="1" inputmode="numeric" aria-label="Repeticiones">
+      <input class="set-kg" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Kilos">
+      <button type="button" class="icon-btn set-remove" aria-label="Quitar serie">✕</button>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>

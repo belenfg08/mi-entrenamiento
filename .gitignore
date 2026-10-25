@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+node_modules/
+.env
+*.log
+.DS_Store
+Thumbs.db
+
+# Respaldos de datos personales descargados desde la app
+mi-entrenamiento-respaldo-*.json
