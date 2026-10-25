@@ -8,6 +8,14 @@
   var DAYS = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   var MONTHS = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   var MEALS = ['Desayuno', 'Almuerzo', 'Once', 'Cena', 'Colación'];
+  // Faixas de adulto de BJJ. La negra lleva la barra roja y hasta 6 grados.
+  var BELTS = [
+    { id: 'blanca', name: 'Blanca', color: '#f4f4f5', bar: '#18181b', max: 4 },
+    { id: 'azul', name: 'Azul', color: '#1d4ed8', bar: '#18181b', max: 4 },
+    { id: 'morada', name: 'Morada', color: '#7e22ce', bar: '#18181b', max: 4 },
+    { id: 'marron', name: 'Marrón', color: '#7c2d12', bar: '#18181b', max: 4 },
+    { id: 'negra', name: 'Negra', color: '#18181b', bar: '#dc2626', max: 6 }
+  ];
   var DEFAULT_EXERCISES = ['Sentadilla', 'Peso muerto', 'Press banca', 'Press militar', 'Dominadas',
     'Remo con barra', 'Fondos', 'Hip thrust', 'Zancadas', 'Flexiones', 'Kettlebell swing', 'Abdominales'];
 
@@ -17,13 +25,13 @@
   // ---------- Datos ----------
 
   function emptyData() {
-    return { version: 1, goals: { kcal: 2500, protein: 150 }, gym: [], mat: [], food: [], weight: [] };
+    return { version: 1, goals: { kcal: 2500, protein: 150 }, gym: [], mat: [], food: [], weight: [], graduations: [] };
   }
 
   function normalize(d) {
     var base = emptyData();
     if (!d || typeof d !== 'object') return base;
-    ['gym', 'mat', 'food', 'weight'].forEach(function (k) { if (Array.isArray(d[k])) base[k] = d[k]; });
+    ['gym', 'mat', 'food', 'weight', 'graduations'].forEach(function (k) { if (Array.isArray(d[k])) base[k] = d[k]; });
     if (d.goals) {
       if (num(d.goals.kcal) > 0) base.goals.kcal = num(d.goals.kcal);
       if (num(d.goals.protein) > 0) base.goals.protein = num(d.goals.protein);
@@ -56,6 +64,7 @@
   function parseIso(s) { var p = s.split('-'); return new Date(+p[0], +p[1] - 1, +p[2]); }
   function addDays(s, n) { var d = parseIso(s); d.setDate(d.getDate() + n); return iso(d); }
   function fmtDate(s) { var d = parseIso(s); return DAYS[d.getDay()] + ' ' + d.getDate() + ' ' + MONTHS[d.getMonth()]; }
+  function fmtDateLong(s) { var d = parseIso(s); return d.getDate() + ' ' + MONTHS[d.getMonth()] + ' ' + d.getFullYear(); }
   function weekStart(s) { var d = parseIso(s); d.setDate(d.getDate() - (d.getDay() + 6) % 7); return iso(d); }
   function fmtNum(n, dec) { return Number(n).toLocaleString('es-CL', { maximumFractionDigits: dec == null ? 0 : dec }); }
   function plain(s) { return String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, ''); }
@@ -94,6 +103,7 @@
   });
 
   function renderAll() {
+    renderBelt();
     renderSummary();
     renderGym();
     renderMat();
@@ -257,6 +267,112 @@
       removeById(data.gym, del.dataset.delGym);
       save();
       renderAll();
+    }
+  });
+
+  // ---------- Faixas (graduaciones de BJJ) ----------
+
+  var beltForm = $('#belt-form');
+
+  function beltInfo(id) { return BELTS.find(function (b) { return b.id === id; }) || BELTS[0]; }
+  function stripesLabel(n) { return n === 0 ? 'sin grados' : n === 1 ? '1 grado' : n + ' grados'; }
+  function beltLabel(g) { return 'Faixa ' + beltInfo(g.belt).name.toLowerCase() + ' · ' + stripesLabel(g.stripes); }
+
+  function beltSvg(id, stripes) {
+    var b = beltInfo(id);
+    var edge = id === 'blanca' ? ' stroke="#a1a1aa" stroke-width="1.5"' : '';
+    var s = '';
+    for (var i = 0; i < stripes; i++) s += '<rect x="' + (212 + i * 11) + '" y="9" width="6" height="30" fill="#ffffff"/>';
+    return '<svg viewBox="0 0 300 48" role="img" aria-label="Faixa ' + b.name.toLowerCase() + ' con ' + stripesLabel(stripes) + '">' +
+      '<rect x="1" y="8" width="298" height="32" rx="5" fill="' + b.color + '"' + edge + '/>' +
+      '<line x1="6" x2="294" y1="16" y2="16" stroke="#000" stroke-opacity=".12"/>' +
+      '<line x1="6" x2="294" y1="32" y2="32" stroke="#000" stroke-opacity=".12"/>' +
+      '<rect x="202" y="8" width="84" height="32" fill="' + b.bar + '"/>' + s + '</svg>';
+  }
+
+  function currentGraduation() { return data.graduations.slice().sort(byDateDesc)[0]; }
+
+  function fillStripes(selected) {
+    var max = beltInfo(field(beltForm, 'belt').value).max;
+    var sel = field(beltForm, 'stripes');
+    var html = '';
+    for (var i = 0; i <= max; i++) html += '<option value="' + i + '">' + stripesLabel(i) + '</option>';
+    sel.innerHTML = html;
+    sel.value = String(Math.min(selected || 0, max));
+    $('#belt-preview').innerHTML = beltSvg(field(beltForm, 'belt').value, +sel.value);
+  }
+
+  // Propone la siguiente graduación: un grado más o la faixa siguiente.
+  function resetBeltForm() {
+    var cur = currentGraduation();
+    var belt = 'blanca', stripes = 0;
+    if (cur) {
+      var idx = BELTS.indexOf(beltInfo(cur.belt));
+      if (cur.stripes < BELTS[idx].max) { belt = cur.belt; stripes = cur.stripes + 1; }
+      else if (idx < BELTS.length - 1) { belt = BELTS[idx + 1].id; }
+      else { belt = cur.belt; stripes = cur.stripes; }
+    }
+    field(beltForm, 'date').value = today();
+    field(beltForm, 'belt').value = belt;
+    fillStripes(stripes);
+  }
+
+  field(beltForm, 'belt').addEventListener('change', function () { fillStripes(+field(beltForm, 'stripes').value); });
+  field(beltForm, 'stripes').addEventListener('change', function () { fillStripes(+field(beltForm, 'stripes').value); });
+
+  beltForm.addEventListener('submit', function (e) {
+    e.preventDefault();
+    data.graduations.push({
+      id: uid(), created: Date.now(),
+      date: field(beltForm, 'date').value || today(),
+      belt: field(beltForm, 'belt').value,
+      stripes: num(field(beltForm, 'stripes').value)
+    });
+    save();
+    $('#belt-details').open = false;
+    renderAll();
+    resetBeltForm();
+    toast('¡Felicitaciones por tu graduación! 🥋');
+  });
+
+  function bjjSince(date) {
+    return data.mat.filter(function (m) { return m.date >= date && m.type !== 'Lucha' && m.type !== 'Otro'; });
+  }
+
+  function renderBelt() {
+    var cur = currentGraduation();
+    if (cur) {
+      var since = bjjSince(cur.date);
+      var hours = since.reduce(function (a, m) { return a + (m.minutes || 0); }, 0) / 60;
+      $('#belt-current').innerHTML = beltSvg(cur.belt, cur.stripes) +
+        '<p class="belt-name">' + beltLabel(cur) + '</p>' +
+        '<p class="muted small">Desde el ' + fmtDateLong(cur.date) + ' · ' + since.length + (since.length === 1 ? ' clase' : ' clases') +
+        ' de BJJ y ' + fmtNum(hours, 1) + ' h desde entonces</p>';
+      $('#summary-belt').innerHTML = '<div class="card belt-mini">' + beltSvg(cur.belt, cur.stripes) +
+        '<div><div class="belt-name">' + beltLabel(cur) + '</div><div class="muted small">' + since.length +
+        (since.length === 1 ? ' clase' : ' clases') + ' de BJJ desde tu última graduación</div></div></div>';
+    } else {
+      $('#belt-current').innerHTML = beltSvg('blanca', 0) +
+        '<p class="muted">Registra tu faixa actual con «Registrar graduación».</p>';
+      $('#summary-belt').innerHTML = '';
+    }
+
+    var list = data.graduations.slice().sort(byDateDesc);
+    $('#belt-history').innerHTML = list.length > 0 ? '<h3 class="muted small" style="margin:16px 0 4px">Historial de graduaciones</h3>' +
+      list.map(function (g) {
+        return '<div class="grad-item">' + beltSvg(g.belt, g.stripes) +
+          '<div class="grow"><div>' + beltInfo(g.belt).name + ' · ' + stripesLabel(g.stripes) + '</div><div class="muted small">' + fmtDateLong(g.date) + '</div></div>' +
+          '<button type="button" class="icon-btn" data-del-grad="' + g.id + '" aria-label="Borrar graduación">🗑</button></div>';
+      }).join('') : '';
+  }
+
+  $('#belt-history').addEventListener('click', function (e) {
+    var del = e.target.closest('[data-del-grad]');
+    if (del && confirm('¿Borrar esta graduación?')) {
+      removeById(data.graduations, del.dataset.delGrad);
+      save();
+      renderAll();
+      resetBeltForm();
     }
   });
 
@@ -605,6 +721,7 @@
       save();
       fillGoals();
       renderAll();
+      resetBeltForm();
       toast('Respaldo restaurado');
     };
     reader.readAsText(file);
@@ -617,6 +734,7 @@
     save();
     fillGoals();
     renderAll();
+    resetBeltForm();
     toast('Datos borrados');
   });
 
@@ -624,6 +742,7 @@
 
   $('#today-label').textContent = fmtDate(today());
   resetGymForm();
+  resetBeltForm();
   resetMatForm();
   resetFoodForm();
   field(weightForm, 'date').value = today();

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Mi Entrenamiento</title>
   <meta name="description" content="Registro personal de gimnasio, jiu-jitsu, lucha, alimentación y peso.">
-  <meta name="theme-color" content="#0f766e">
+  <meta name="theme-color" content="#7e57c2">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icons/icon-180.png">
@@ -22,6 +22,7 @@
   <main>
     <!-- Resumen -->
     <section id="tab-resumen" class="tab" hidden>
+      <div id="summary-belt"></div>
       <h2>Esta semana</h2>
       <div id="week-strip" class="week-strip"></div>
       <div class="legend">
@@ -52,6 +53,32 @@
 
     <!-- Jiu-jitsu y lucha -->
     <section id="tab-mat" class="tab" hidden>
+      <div class="card">
+        <h2>Mi faixa</h2>
+        <div id="belt-current" class="belt"></div>
+        <details id="belt-details">
+          <summary class="btn small">Registrar graduación</summary>
+          <form id="belt-form" autocomplete="off">
+            <div class="row2">
+              <label class="field">Fecha<input type="date" name="date" required></label>
+              <label class="field">Faixa
+                <select name="belt">
+                  <option value="blanca">Blanca</option>
+                  <option value="azul">Azul</option>
+                  <option value="morada">Morada</option>
+                  <option value="marron">Marrón</option>
+                  <option value="negra">Negra</option>
+                </select>
+              </label>
+            </div>
+            <label class="field">Grados<select name="stripes"></select></label>
+            <div id="belt-preview" class="belt"></div>
+            <button type="submit" class="btn primary">Guardar graduación</button>
+          </form>
+        </details>
+        <div id="belt-history"></div>
+      </div>
+
       <form id="mat-form" class="card" autocomplete="off">
         <h2>Nueva clase</h2>
         <div class="row2">
