@@ -168,11 +168,11 @@
         <label class="field">Alimento<input type="text" name="food" required placeholder="ej. 2 huevos + pan integral"></label>
         <div id="food-per100" class="per100" hidden>
           <p class="small" id="food-per100-text"></p>
-          <label class="field">Cantidad (g)<input type="number" name="grams" min="0" step="1" inputmode="numeric"></label>
+          <label class="field">Cantidad (g)<input type="number" name="grams" min="0" step="any" inputmode="decimal"></label>
         </div>
         <div class="row2">
-          <label class="field">Calorías (kcal)<input type="number" name="kcal" min="0" step="1" inputmode="numeric"></label>
-          <label class="field">Proteína (g)<input type="number" name="protein" min="0" step="0.5" inputmode="decimal"></label>
+          <label class="field">Calorías (kcal)<input type="number" name="kcal" min="0" step="any" inputmode="decimal"></label>
+          <label class="field">Proteína (g)<input type="number" name="protein" min="0" step="any" inputmode="decimal"></label>
         </div>
         <button type="submit" class="btn primary">Agregar</button>
       </form>
@@ -191,10 +191,16 @@
         <h2>Registrar peso</h2>
         <div class="row2">
           <label class="field">Fecha<input type="date" name="date" required></label>
-          <label class="field">Peso (kg)<input type="number" name="kg" min="20" max="300" step="0.1" required inputmode="decimal"></label>
+          <label class="field">Peso (kg)<input type="number" name="kg" min="20" max="300" step="any" required inputmode="decimal"></label>
         </div>
         <button type="submit" class="btn primary">Guardar peso</button>
       </form>
+      <div id="body-card" class="card" hidden>
+        <h2>Composición corporal</h2>
+        <p id="body-date" class="muted small"></p>
+        <div id="body-stats" class="cards"></div>
+        <p id="body-note" class="muted small"></p>
+      </div>
       <div id="weight-chart" class="card"></div>
       <h2>Historial</h2>
       <div id="weight-history"></div>
@@ -206,8 +212,9 @@
         <h2>Metas diarias</h2>
         <div class="row2">
           <label class="field">Calorías (kcal)<input type="number" name="kcal" min="500" max="8000" step="50" inputmode="numeric"></label>
-          <label class="field">Proteína (g)<input type="number" name="protein" min="10" max="500" step="5" inputmode="numeric"></label>
+          <label class="field">Proteína (g)<input type="number" name="protein" min="10" max="500" step="any" inputmode="decimal"></label>
         </div>
+        <label class="field">Estatura (cm), para calcular el IMC<input type="number" name="height" min="100" max="230" step="any" inputmode="decimal" placeholder="ej. 165"></label>
         <p class="muted small">Referencia: si entrenas fuerte, la proteína suele ir entre 1,6 y 2 g por kilo de peso.</p>
         <button type="submit" class="btn primary">Guardar metas</button>
       </form>
@@ -278,7 +285,7 @@
     <div class="set-row">
       <span class="set-n"></span>
       <input class="set-reps" type="number" min="0" step="1" inputmode="numeric" aria-label="Repeticiones">
-      <input class="set-kg" type="number" min="0" step="0.5" inputmode="decimal" aria-label="Kilos">
+      <input class="set-kg" type="number" min="0" step="any" inputmode="decimal" aria-label="Kilos">
       <button type="button" class="icon-btn set-remove" aria-label="Quitar serie">✕</button>
     </div>
   </template>

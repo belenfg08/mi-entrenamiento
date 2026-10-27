@@ -40,6 +40,7 @@
     if (d.goals) {
       if (num(d.goals.kcal) > 0) base.goals.kcal = num(d.goals.kcal);
       if (num(d.goals.protein) > 0) base.goals.protein = num(d.goals.protein);
+      if (num(d.goals.heightCm) > 0) { base.goals.heightCm = num(d.goals.heightCm); base.goals.heightSource = d.goals.heightSource || 'manual'; }
     }
     return base;
   }
@@ -1149,6 +1150,65 @@
     return changed;
   }
 
+  // % de grasa y metabolismo basal: el último de cada día se guarda en el peso de ese día.
+  // La estatura se usa para el IMC, salvo que se haya escrito a mano en Ajustes.
+  function importBody(extras) {
+    var changed = 0;
+    [['bodyFat', 'fat'], ['basalCalories', 'bmr']].forEach(function (pair) {
+      var byDay = {};
+      (extras[pair[0]] || []).forEach(function (s) {
+        if (!(s.value > 0)) return;
+        var d = iso(new Date(s.startDate));
+        if (!byDay[d] || Date.parse(s.startDate) > Date.parse(byDay[d].startDate)) byDay[d] = s;
+      });
+      Object.keys(byDay).forEach(function (d) {
+        var w = data.weight.find(function (x) { return x.date === d; });
+        var v = Math.round(byDay[d].value * 10) / 10;
+        if (w && w[pair[1]] !== v) { w[pair[1]] = v; changed++; }
+      });
+    });
+    var h = latestSample(extras.height || []);
+    if (h && data.goals.heightSource !== 'manual') {
+      var cm = Math.round(h.value);
+      if (cm !== data.goals.heightCm) { data.goals.heightCm = cm; data.goals.heightSource = 'hc'; changed++; }
+    }
+    return changed;
+  }
+
+  function bmi(kg) {
+    var m = (data.goals.heightCm || 0) / 100;
+    return m > 0 ? kg / (m * m) : 0;
+  }
+
+  function bmiLabel(v) {
+    return v < 18.5 ? 'bajo peso' : v < 25 ? 'normal' : v < 30 ? 'sobrepeso' : 'obesidad';
+  }
+
+  // Lo que se calcula igual que en EufyLife: IMC (peso / estatura²), masa grasa y masa magra
+  // (peso × % grasa y el resto). Agua, músculo, hueso y grasa visceral son estimaciones propias
+  // de la báscula que Health Connect no guarda.
+  function renderBody() {
+    var list = weightsAsc();
+    var last = list[list.length - 1];
+    $('#body-card').hidden = !last;
+    if (!last) return;
+    $('#body-date').textContent = 'Último pesaje: ' + fmtDate(last.date) + (last.source === 'hc' ? ' · báscula' : '');
+    var b = bmi(last.kg);
+    var html = stat('Peso', fmtNum(last.kg, 1) + ' kg', '') +
+      stat('IMC', b ? fmtNum(b, 1) : '—', b ? bmiLabel(b) : 'escribe tu estatura en Ajustes');
+    if (last.fat) {
+      var fatKg = last.kg * last.fat / 100;
+      html += stat('% de grasa corporal', fmtNum(last.fat, 1) + ' %', '') +
+        stat('Masa grasa corporal', fmtNum(fatKg, 1) + ' kg', '') +
+        stat('Masa magra corporal', fmtNum(last.kg - fatKg, 1) + ' kg', '');
+    }
+    if (last.bmr) html += stat('MB (metabolismo basal)', fmtNum(last.bmr) + ' kcal', 'por día');
+    $('#body-stats').innerHTML = html;
+    $('#body-note').textContent = isNative
+      ? 'Agua, masa muscular, masa ósea y grasa visceral no llegan: Health Connect no guarda esos datos.'
+      : 'En la app Android, el % de grasa y el metabolismo basal llegan solos desde la báscula.';
+  }
+
   function latestSample(samples) {
     return samples.reduce(function (best, s) {
       return s.value > 0 && (!best || Date.parse(s.startDate) > Date.parse(best.startDate)) ? s : best;
@@ -1160,18 +1220,30 @@
   function syncHealth(interactive) {
     if (!isNative || hcBusy) return Promise.resolve();
     hcBusy = true;
-    var scopes = { read: ['weight'] };
+    // Además del peso, Health Connect puede tener % de grasa, metabolismo basal y estatura.
+    // El resto de lo que muestra EufyLife (agua, músculo, hueso, grasa visceral) no existe en Health Connect.
+    var scopes = { read: ['weight', 'bodyFat', 'basalCalories', 'height'] };
+    var extras = {};
     return health('isAvailable').then(function (a) {
       if (!a.available) throw new Error('Health Connect no está disponible en este teléfono' + (a.reason ? ' (' + a.reason + ')' : '') + '.');
       return health(interactive ? 'requestAuthorization' : 'checkAuthorization', scopes);
     }).then(function (st) {
-      if (!st.readAuthorized || st.readAuthorized.indexOf('weight') < 0) throw new Error('Falta el permiso para leer el peso en Health Connect.');
+      var ok = st.readAuthorized || [];
+      if (ok.indexOf('weight') < 0) throw new Error('Falta el permiso para leer el peso en Health Connect.');
       var start = new Date();
       start.setDate(start.getDate() - 30); // Health Connect entrega hasta 30 días hacia atrás
-      return health('readSamples', { dataType: 'weight', startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 1000 });
+      var range = { startDate: start.toISOString(), endDate: new Date().toISOString(), limit: 1000 };
+      var extraTypes = ['bodyFat', 'basalCalories', 'height'].filter(function (k) { return ok.indexOf(k) >= 0; });
+      return Promise.all(extraTypes.map(function (k) {
+        return health('readSamples', Object.assign({ dataType: k }, range))
+          .then(function (r) { extras[k] = r.samples || []; })
+          .catch(function () { extras[k] = []; });
+      })).then(function () {
+        return health('readSamples', Object.assign({ dataType: 'weight' }, range));
+      });
     }).then(function (res) {
       var samples = res.samples || [];
-      var n = importWeights(samples);
+      var n = importWeights(samples) + importBody(extras);
       setHcEnabled();
       $('#hc-sync').textContent = 'Sincronizar ahora';
       var now = new Date();
@@ -1182,11 +1254,16 @@
         lastTxt = ' · último en Health Connect: ' + fmtNum(Math.round(last.value * 10) / 10, 1) + ' kg, ' +
           (iso(t) === today() ? 'hoy' : fmtDate(iso(t))) + ' ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
       }
+      var found = [];
+      if ((extras.bodyFat || []).length) found.push('% grasa');
+      if ((extras.basalCalories || []).length) found.push('metabolismo basal');
+      if ((extras.height || []).length) found.push('estatura');
       hcStatus('✅ Conectado · revisado a las ' + pad(now.getHours()) + ':' + pad(now.getMinutes()) +
-        ' · ' + samples.length + (samples.length === 1 ? ' pesaje' : ' pesajes') + ' en 30 días' + lastTxt);
+        ' · ' + samples.length + (samples.length === 1 ? ' pesaje' : ' pesajes') + ' en 30 días' + lastTxt +
+        (found.length ? ' · también: ' + found.join(', ') : ''));
       if (n) { save(); renderAll(); }
-      if (n) toast(n === 1 ? 'Peso nuevo desde la báscula ⚖️' : n + ' pesos nuevos desde la báscula ⚖️');
-      else if (interactive) toast('Todo al día: no hay pesos nuevos');
+      if (n) toast('Datos nuevos desde la báscula ⚖️');
+      else if (interactive) toast('Todo al día: no hay datos nuevos');
     }).catch(function (err) {
       hcStatus('⚠️ ' + ((err && err.message) || 'No se pudo leer Health Connect.'));
       if (interactive) toast((err && err.message) || 'No se pudo leer Health Connect.');
@@ -1221,6 +1298,7 @@
   });
 
   function renderWeight() {
+    renderBody();
     var list = weightsAsc();
     var chart = $('#weight-chart');
     var pts = list.slice(-60);
@@ -1407,6 +1485,7 @@
   function fillGoals() {
     field(goalsForm, 'kcal').value = data.goals.kcal;
     field(goalsForm, 'protein').value = data.goals.protein;
+    field(goalsForm, 'height').value = data.goals.heightCm || '';
   }
 
   goalsForm.addEventListener('submit', function (e) {
@@ -1415,6 +1494,10 @@
     var protein = num(field(goalsForm, 'protein').value);
     if (kcal > 0) data.goals.kcal = kcal;
     if (protein > 0) data.goals.protein = protein;
+    var height = num(field(goalsForm, 'height').value);
+    if (height >= 100 && height <= 230) {
+      if (height !== data.goals.heightCm) { data.goals.heightCm = height; data.goals.heightSource = 'manual'; }
+    } else if (!field(goalsForm, 'height').value) { delete data.goals.heightCm; delete data.goals.heightSource; }
     save();
     renderAll();
     toast('Metas guardadas');

@@ -18,7 +18,7 @@ App web personal para anotar en un solo lugar el gimnasio, las clases de jiu-jit
 - **Comida:** alimentos por momento del día, con barras de avance hacia la meta de calorías y proteína, y accesos rápidos a lo que más se repite.
   - **Buscar alimentos:** en una lista de 41 alimentos comunes con valores aproximados por 100 g (funciona sin internet) y en [Open Food Facts](https://world.openfoodfacts.org). Al elegir uno y escribir los gramos, calcula las calorías y la proteína.
   - **Código de barras:** con la cámara (usa `BarcodeDetector` si el navegador lo trae o, si no, la librería ZXing) o escribiendo el número, busca el producto en Open Food Facts.
-- **Peso:** un registro por día, con gráfico e historial. En la versión Android (ver abajo) se llena solo con el peso que la báscula deja en Health Connect.
+- **Peso:** un registro por día, con gráfico e historial, y un cuadro de composición corporal: IMC (con la estatura de Ajustes o de Health Connect) y, cuando hay % de grasa, masa grasa y masa magra. En la versión Android (ver abajo) el peso, el % de grasa y el metabolismo basal llegan solos desde lo que la báscula deja en Health Connect.
 - **Ajustes:** metas diarias, descargar y restaurar un respaldo (`.json`), y borrar todo.
 
 ## Uso
@@ -57,9 +57,12 @@ HTML, CSS y JavaScript sin compilación. La única librería incluida es [@zxing
 - Fotos: con imágenes de prueba generadas en el navegador se revisó el límite de 4, la reducción (3000×2000 → 1280×853), que se mantengan al recargar, el visor, que al borrar un entrenamiento se borren sus fotos, y el ciclo respaldo → borrar todo → restaurar. También se revisó que guardar justo después de elegir las fotos no las pierda ni duplique la entrada.
 - Alimentos: se revisó el cálculo por gramos (150 g de yogur griego a 97 kcal/100 g dan 146 kcal), que se guarde como frecuente con sus valores por 100 g, y la consulta real a Open Food Facts por código de barras (7802955007799), además de los mensajes de código inválido o no encontrado. El lector ZXing decodificó un EAN-13 dibujado en pantalla.
 - Peso desde Health Connect: se probó la lógica con datos simulados (último pesaje del día, redondeo, el peso más reciente entre báscula y manual, sin duplicar) y la usuaria confirmó en su Android que se sincroniza el peso de su báscula.
+- Decimales: se guardaron 5,3 g de proteína, 120,5 kcal y 62,25 kg en una serie. Composición corporal: con datos simulados de Health Connect (67,6 kg, 31,8 % de grasa, MB 1.345 kcal, 169 cm) la app mostró IMC 23,7, masa grasa 21,5 kg y masa magra 46,1 kg, los mismos valores que muestra la app de la báscula.
 - No se probaron con fotos reales de un celular ni con la ventana real de descarga y selección de archivos. La cámara del escáner no se pudo probar en el navegador de desarrollo.
 
 ## Límites
+
+- Health Connect no guarda agua, masa muscular, masa ósea ni grasa visceral, así que esas medidas de la báscula no llegan a la app.
 
 - Sin sincronización entre dispositivos ni copia en la nube.
 - Los valores de la lista común son aproximados, y los de Open Food Facts los suben voluntarios, así que pueden tener errores: conviene compararlos con la etiqueta.

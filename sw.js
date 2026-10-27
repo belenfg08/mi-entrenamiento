@@ -1,6 +1,6 @@
 /* Guarda la app en el dispositivo para que abra sin internet.
-   Al cambiar archivos, sube el número de CACHE para que se actualice. */
-var CACHE = 'mi-entrenamiento-v6';
+   Al cambiar archivos, sube el nÃºmero de CACHE para que se actualice. */
+var CACHE = 'mi-entrenamiento-v7';
 var FILES = [
   './',
   './index.html',
@@ -26,7 +26,7 @@ self.addEventListener('activate', function (e) {
   }).then(function () { return self.clients.claim(); }));
 });
 
-// Responde desde el dispositivo y, en paralelo, trae la versión nueva si hay internet.
+// Responde desde el dispositivo y, en paralelo, trae la versiÃ³n nueva si hay internet.
 self.addEventListener('fetch', function (e) {
   var req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
