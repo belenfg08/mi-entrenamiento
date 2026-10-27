@@ -1,6 +1,6 @@
 /* Guarda la app en el dispositivo para que abra sin internet.
    Al cambiar archivos, sube el número de CACHE para que se actualice. */
-var CACHE = 'mi-entrenamiento-v5';
+var CACHE = 'mi-entrenamiento-v6';
 var FILES = [
   './',
   './index.html',

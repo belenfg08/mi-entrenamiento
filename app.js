@@ -16,6 +16,10 @@
     { id: 'marron', name: 'Marrón', pt: 'marrom', color: '#7c2d12', bar: '#18181b', max: 4 },
     { id: 'negra', name: 'Negra', pt: 'preta', color: '#18181b', bar: '#dc2626', max: 6 }
   ];
+  // Tipos fijos del tatami; cualquier otro texto es un deporte escrito a mano (trekking, trotar…).
+  var MAT_TYPES = ['BJJ con gi', 'NoGi', 'Lucha', 'Open mat'];
+  var BJJ_TYPES = ['BJJ con gi', 'NoGi', 'Open mat'];
+  function isSport(type) { return MAT_TYPES.indexOf(type) < 0; }
   var DEFAULT_EXERCISES = ['Sentadilla', 'Peso muerto', 'Press banca', 'Press militar', 'Dominadas',
     'Remo con barra', 'Fondos', 'Hip thrust', 'Zancadas', 'Flexiones', 'Kettlebell swing', 'Abdominales'];
 
@@ -32,6 +36,7 @@
     var base = emptyData();
     if (!d || typeof d !== 'object') return base;
     ['gym', 'mat', 'food', 'weight', 'graduations'].forEach(function (k) { if (Array.isArray(d[k])) base[k] = d[k]; });
+    base.mat.forEach(function (m) { if (m.type === 'BJJ sin gi') m.type = 'NoGi'; }); // nombre anterior
     if (d.goals) {
       if (num(d.goals.kcal) > 0) base.goals.kcal = num(d.goals.kcal);
       if (num(d.goals.protein) > 0) base.goals.protein = num(d.goals.protein);
@@ -542,7 +547,7 @@
   });
 
   function bjjSince(date) {
-    return data.mat.filter(function (m) { return m.date >= date && m.type !== 'Lucha' && m.type !== 'Otro'; });
+    return data.mat.filter(function (m) { return m.date >= date && BJJ_TYPES.indexOf(m.type) >= 0; });
   }
 
   function renderBelt() {
@@ -597,48 +602,145 @@
   var matText = ['type', 'techniques', 'good', 'review', 'injuries'];
   var matPhotos = photoPicker($('#mat-photos'));
 
+  var editingMatId = null; // clase que se está corrigiendo, o null si es nueva
+  var keptPhotos = [];     // al editar: fotos ya guardadas, con marca de quitar
+
+  // Muestra el campo "¿Qué deporte?" y oculta los combates cuando no es del tatami.
+  function syncMatType() {
+    var other = field(matForm, 'type').value === '__otro';
+    $('#mat-other-field').hidden = !other;
+    $('#mat-rolls-field').hidden = other;
+    $('#mat-form button[type=submit]').textContent = editingMatId ? 'Guardar cambios' : other ? 'Guardar deporte' : 'Guardar clase';
+  }
+
+  function setMatType(type) {
+    if (isSport(type)) {
+      field(matForm, 'type').value = '__otro';
+      field(matForm, 'other').value = type;
+    } else {
+      field(matForm, 'type').value = type;
+      field(matForm, 'other').value = '';
+    }
+    syncMatType();
+  }
+
+  function formMatType() {
+    if (field(matForm, 'type').value !== '__otro') return field(matForm, 'type').value;
+    var t = field(matForm, 'other').value.trim();
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) : '';
+  }
+
+  function renderKeptPhotos() {
+    $('#mat-existing-photos .thumbs').innerHTML = keptPhotos.map(function (p, i) {
+      return '<span class="thumb' + (p.remove ? ' removed' : '') + '"><img data-photo="' + p.id + '" alt="Foto guardada ' + (i + 1) + '">' +
+        '<button type="button" class="thumb-x" data-keep="' + i + '" aria-label="' + (p.remove ? 'Conservar' : 'Quitar') + ' foto ' + (i + 1) + '">' + (p.remove ? '↺' : '✕') + '</button></span>';
+    }).join('');
+    hydratePhotos($('#mat-existing-photos'));
+  }
+
+  $('#mat-existing-photos').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-keep]');
+    if (!b) return;
+    var p = keptPhotos[+b.dataset.keep];
+    p.remove = !p.remove;
+    renderKeptPhotos();
+  });
+
   function resetMatForm() {
-    var type = field(matForm, 'type').value;
+    var type = editingMatId ? 'BJJ con gi' : formMatType(); // recuerda el último tipo de una clase nueva
+    editingMatId = null;
+    keptPhotos = [];
+    renderKeptPhotos();
+    matPhotos.clear();
     matForm.reset();
     field(matForm, 'date').value = today();
-    if (type) field(matForm, 'type').value = type; // recuerda el último tipo
+    setMatType(type || 'BJJ con gi');
+    $('#mat-form-title').textContent = 'Nueva clase o deporte';
+    $('#mat-cancel').hidden = true;
     $('#mat-effort-out').textContent = field(matForm, 'effort').value;
   }
 
+  function editMat(id) {
+    var m = data.mat.find(function (x) { return x.id === id; });
+    if (!m) return;
+    showTab('mat');
+    editingMatId = id;
+    field(matForm, 'date').value = m.date;
+    field(matForm, 'minutes').value = m.minutes || 0;
+    field(matForm, 'rolls').value = m.rolls || 0;
+    field(matForm, 'effort').value = m.effort || 6;
+    $('#mat-effort-out').textContent = field(matForm, 'effort').value;
+    ['techniques', 'good', 'review', 'injuries'].forEach(function (k) { field(matForm, k).value = m[k] || ''; });
+    setMatType(m.type);
+    keptPhotos = (m.photos || []).map(function (pid) { return { id: pid, remove: false }; });
+    renderKeptPhotos();
+    matPhotos.clear();
+    $('#mat-form-title').textContent = 'Editar ' + m.type + ' · ' + fmtDate(m.date);
+    $('#mat-cancel').hidden = false;
+    $('#mat-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  field(matForm, 'type').addEventListener('change', function () {
+    syncMatType();
+    if (field(matForm, 'type').value === '__otro') field(matForm, 'other').focus();
+  });
   field(matForm, 'effort').addEventListener('input', function (e) { $('#mat-effort-out').textContent = e.target.value; });
+  $('#mat-cancel').addEventListener('click', function () { resetMatForm(); });
 
   matForm.addEventListener('submit', function (e) {
     e.preventDefault();
-    var entry = {
-      id: uid(), created: Date.now(),
+    var type = formMatType();
+    if (!type) { toast('Escribe qué deporte hiciste.'); field(matForm, 'other').focus(); return; }
+    var values = {
+      type: type,
       date: field(matForm, 'date').value || today(),
       minutes: num(field(matForm, 'minutes').value),
-      rolls: num(field(matForm, 'rolls').value),
+      rolls: isSport(type) ? 0 : num(field(matForm, 'rolls').value),
       effort: num(field(matForm, 'effort').value)
     };
-    matText.forEach(function (k) { entry[k] = field(matForm, k).value.trim(); });
+    ['techniques', 'good', 'review', 'injuries'].forEach(function (k) { values[k] = field(matForm, k).value.trim(); });
+    var editing = editingMatId && data.mat.find(function (x) { return x.id === editingMatId; });
+    var kept = keptPhotos.filter(function (p) { return !p.remove; }).map(function (p) { return p.id; });
+    var removed = keptPhotos.filter(function (p) { return p.remove; }).map(function (p) { return p.id; });
     var btn = matForm.querySelector('[type=submit]');
     if (btn.disabled) return;
     btn.disabled = true;
-    matPhotos.take().then(storePhotos).then(function (ids) {
+    matPhotos.take().then(function (blobs) {
+      // Máximo 4 fotos en total entre las que quedan y las nuevas.
+      var room = Math.max(0, MAX_PHOTOS - kept.length);
+      if (blobs.length > room) toast('Máximo ' + MAX_PHOTOS + ' fotos: se guardaron las primeras.');
+      return storePhotos(blobs.slice(0, room));
+    }).then(function (ids) {
       btn.disabled = false;
-      if (ids.length) entry.photos = ids;
-      data.mat.push(entry);
+      var photos = kept.concat(ids);
+      if (editing) {
+        Object.assign(editing, values);
+        if (photos.length) editing.photos = photos; else delete editing.photos;
+        deletePhotos(removed);
+      } else {
+        var entry = Object.assign({ id: uid(), created: Date.now() }, values);
+        if (photos.length) entry.photos = photos;
+        data.mat.push(entry);
+      }
       save();
       resetMatForm();
       renderAll();
-      toast('Clase guardada 🥋');
+      toast(editing ? 'Cambios guardados ✏️' : isSport(type) ? 'Deporte guardado 🏃' : 'Clase guardada 🥋');
     });
   });
 
   function renderMat() {
     var month = today().slice(0, 7);
     var monthList = data.mat.filter(function (m) { return m.date.slice(0, 7) === month; });
+    var monthMat = monthList.filter(function (m) { return !isSport(m.type); });
+    var monthSport = monthList.filter(function (m) { return isSport(m.type); });
+    var allMat = data.mat.filter(function (m) { return !isSport(m.type); });
     var sum = function (list, k) { return list.reduce(function (a, m) { return a + (m[k] || 0); }, 0); };
     $('#mat-stats').innerHTML =
-      stat('Clases este mes', monthList.length, fmtNum(sum(monthList, 'minutes') / 60, 1) + ' h') +
-      stat('Combates este mes', sum(monthList, 'rolls'), 'rolls') +
-      stat('Total histórico', data.mat.length, fmtNum(sum(data.mat, 'minutes') / 60, 1) + ' h en el tatami');
+      stat('Clases este mes', monthMat.length, fmtNum(sum(monthMat, 'minutes') / 60, 1) + ' h') +
+      stat('Combates este mes', sum(monthMat, 'rolls'), 'rolls') +
+      stat('Otros deportes este mes', monthSport.length, fmtNum(sum(monthSport, 'minutes') / 60, 1) + ' h') +
+      stat('Total histórico', allMat.length, fmtNum(sum(allMat, 'minutes') / 60, 1) + ' h en el tatami');
 
     var q = plain($('#mat-search').value.trim());
     var list = data.mat.slice().sort(byDateDesc).filter(function (m) {
@@ -651,19 +753,28 @@
       if (m.review) parts.push('<p><span class="label">Repasar:</span> ' + multiline(m.review) + '</p>');
       if (m.injuries) parts.push('<p><span class="label">Molestias:</span> ' + esc(m.injuries) + '</p>');
       return '<div class="card entry">' +
-        '<div class="entry-head"><span class="entry-title"><span class="badge">' + esc(m.type) + '</span>' + fmtDate(m.date) + '</span>' +
-        '<button type="button" class="icon-btn" data-del-mat="' + m.id + '" aria-label="Borrar clase">🗑</button></div>' +
-        '<p class="muted small">' + (m.minutes || 0) + ' min · ' + (m.rolls || 0) + ' rolls · cansancio ' + (m.effort || '–') + '/10</p>' +
+        '<div class="entry-head"><span class="entry-title"><span class="badge' + (isSport(m.type) ? ' sport' : '') + '">' + esc(m.type) + '</span>' + fmtDate(m.date) + '</span>' +
+        '<span class="entry-actions"><button type="button" class="icon-btn" data-edit-mat="' + m.id + '" aria-label="Editar">✏️</button>' +
+        '<button type="button" class="icon-btn" data-del-mat="' + m.id + '" aria-label="Borrar">🗑</button></span></div>' +
+        '<p class="muted small">' + (m.minutes || 0) + ' min' + (isSport(m.type) ? '' : ' · ' + (m.rolls || 0) + ' rolls') + ' · cansancio ' + (m.effort || '–') + '/10</p>' +
         parts.join('') + photoStrip(m.photos) + '</div>';
-    }).join('') : empty(q ? 'No hay clases que coincidan con la búsqueda.' : 'Aún no hay clases registradas.');
+    }).join('') : empty(q ? 'No hay registros que coincidan con la búsqueda.' : 'Aún no hay clases ni deportes registrados.');
     hydratePhotos($('#mat-history'));
+
+    // Deportes escritos antes, para elegirlos rápido.
+    var sports = {};
+    data.mat.forEach(function (m) { if (isSport(m.type)) sports[plain(m.type)] = m.type; });
+    $('#sport-names').innerHTML = Object.keys(sports).sort().map(function (k) { return '<option value="' + esc(sports[k]) + '">'; }).join('');
   }
 
   $('#mat-search').addEventListener('input', renderMat);
 
   $('#mat-history').addEventListener('click', function (e) {
+    var edit = e.target.closest('[data-edit-mat]');
+    if (edit) { editMat(edit.dataset.editMat); return; }
     var del = e.target.closest('[data-del-mat]');
-    if (del && confirm('¿Borrar esta clase?')) {
+    if (del && confirm('¿Borrar este registro?')) {
+      if (del.dataset.delMat === editingMatId) resetMatForm();
       var mc = data.mat.find(function (x) { return x.id === del.dataset.delMat; });
       if (mc) deletePhotos(mc.photos);
       removeById(data.mat, del.dataset.delMat);
@@ -1161,29 +1272,96 @@
     return '<div class="stat"><div class="k">' + k + '</div><div class="v">' + v + '</div>' + (s ? '<div class="s">' + s + '</div>' : '') + '</div>';
   }
 
+  // Semana que se está mirando en el Resumen (lunes) y día elegido para ver el detalle.
+  var summaryWeek = weekStart(today());
+  var selectedDay = today();
+
+  function weekTitle(start) {
+    var cur = weekStart(today());
+    if (start === cur) return 'Esta semana';
+    if (start === addDays(cur, -7)) return 'Semana pasada';
+    var a = parseIso(start), b = parseIso(addDays(start, 6));
+    return a.getDate() + (a.getMonth() !== b.getMonth() ? ' ' + MONTHS[a.getMonth()] : '') + ' – ' + b.getDate() + ' ' + MONTHS[b.getMonth()] +
+      (b.getFullYear() !== parseIso(today()).getFullYear() ? ' ' + b.getFullYear() : '');
+  }
+
+  function renderDayDetail(d) {
+    var gym = data.gym.filter(function (x) { return x.date === d; });
+    var mat = data.mat.filter(function (x) { return x.date === d; });
+    var food = data.food.filter(function (x) { return x.date === d; });
+    var w = data.weight.find(function (x) { return x.date === d; });
+    var items = [];
+    gym.forEach(function (g) {
+      var sets = g.exercises.reduce(function (a, ex) { return a + ex.sets.length; }, 0);
+      items.push('<div class="detail-item"><div><div>🏋️ Gimnasio</div><div class="meta">' +
+        esc(g.exercises.map(function (ex) { return ex.name; }).join(', ')) + ' · ' + sets + (sets === 1 ? ' serie' : ' series') + '</div></div></div>');
+    });
+    mat.forEach(function (m) {
+      items.push('<div class="detail-item"><div><div><span class="badge' + (isSport(m.type) ? ' sport' : '') + '">' + esc(m.type) + '</span></div><div class="meta">' +
+        (m.minutes || 0) + ' min' + (isSport(m.type) ? '' : ' · ' + (m.rolls || 0) + ' rolls') + ' · cansancio ' + (m.effort || '–') + '/10' +
+        (m.techniques ? ' · ' + esc(m.techniques) : '') + '</div></div>' +
+        '<button type="button" class="icon-btn" data-edit-mat="' + m.id + '" aria-label="Editar">✏️</button></div>');
+    });
+    if (food.length) {
+      var kcal = food.reduce(function (a, f) { return a + (f.kcal || 0); }, 0);
+      var prot = food.reduce(function (a, f) { return a + (f.protein || 0); }, 0);
+      items.push('<div class="detail-item"><div><div>🍽️ Comida</div><div class="meta">' + fmtNum(kcal) + ' kcal · ' + fmtNum(prot, 1) + ' g proteína · ' +
+        food.length + (food.length === 1 ? ' alimento' : ' alimentos') + '</div></div>' +
+        '<button type="button" class="btn small" data-food-day="' + d + '">Ver</button></div>');
+    }
+    if (w) items.push('<div class="detail-item"><div><div>⚖️ Peso</div><div class="meta">' + fmtNum(w.kg, 1) + ' kg' + (w.source === 'hc' ? ' · báscula' : '') + '</div></div></div>');
+    $('#day-detail').innerHTML = '<h3>' + (d === today() ? 'Hoy, ' : '') + fmtDate(d) + '</h3>' +
+      (items.length ? items.join('') : '<p class="muted small">Sin registros este día.</p>');
+  }
+
+  $('#week-prev').addEventListener('click', function () { summaryWeek = addDays(summaryWeek, -7); renderSummary(); });
+  $('#week-next').addEventListener('click', function () {
+    if (summaryWeek < weekStart(today())) { summaryWeek = addDays(summaryWeek, 7); renderSummary(); }
+  });
+  $('#week-strip').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-day]');
+    if (b) { selectedDay = b.dataset.day; renderSummary(); }
+  });
+  $('#day-detail').addEventListener('click', function (e) {
+    var edit = e.target.closest('[data-edit-mat]');
+    if (edit) { editMat(edit.dataset.editMat); return; }
+    var fd = e.target.closest('[data-food-day]');
+    if (fd) { foodDay = fd.dataset.foodDay; renderFood(); showTab('food'); }
+  });
+
   function renderSummary() {
     var t = today();
-    var start = weekStart(t);
+    var start = summaryWeek;
     var end = addDays(start, 6);
+    var thisWeek = start === weekStart(t);
+    $('#week-title').textContent = weekTitle(start);
+    $('#week-next').disabled = thisWeek;
+    if (selectedDay < start || selectedDay > end) selectedDay = thisWeek ? t : end;
+
     var inWeek = function (x) { return x.date >= start && x.date <= end; };
     var gym = data.gym.filter(inWeek);
-    var mat = data.mat.filter(inWeek);
+    var mat = data.mat.filter(function (x) { return inWeek(x) && !isSport(x.type); });
+    var sports = data.mat.filter(function (x) { return inWeek(x) && isSport(x.type); });
     var food = data.food.filter(inWeek);
 
     var strip = '';
     for (var i = 0; i < 7; i++) {
       var d = addDays(start, i);
       var has = function (list) { return list.some(function (x) { return x.date === d; }); };
-      strip += '<div class="day' + (d === t ? ' today' : '') + '"><div class="muted">' + DAYS[parseIso(d).getDay()] + '</div>' +
+      strip += '<button type="button" class="day' + (d === t ? ' today' : '') + (d === selectedDay ? ' selected' : '') + '" data-day="' + d + '"' +
+        (d > t ? ' disabled' : '') + ' aria-label="' + fmtDate(d) + '"><div class="muted">' + DAYS[parseIso(d).getDay()] + '</div>' +
         '<div class="n">' + parseIso(d).getDate() + '</div><div class="dots">' +
         (has(gym) ? '<i class="dot gym" title="Gimnasio"></i>' : '') +
         (has(mat) ? '<i class="dot mat" title="Tatami"></i>' : '') +
-        (has(food) ? '<i class="dot food" title="Comida"></i>' : '') + '</div></div>';
+        (has(sports) ? '<i class="dot sport" title="Otro deporte"></i>' : '') +
+        (has(food) ? '<i class="dot food" title="Comida"></i>' : '') + '</div></button>';
     }
     $('#week-strip').innerHTML = strip;
+    renderDayDetail(selectedDay);
 
     var matMin = mat.reduce(function (a, m) { return a + (m.minutes || 0); }, 0);
     var matRolls = mat.reduce(function (a, m) { return a + (m.rolls || 0); }, 0);
+    var sportMin = sports.reduce(function (a, m) { return a + (m.minutes || 0); }, 0);
     var foodDays = {};
     food.forEach(function (f) {
       var fd = foodDays[f.date] || (foodDays[f.date] = { kcal: 0, protein: 0 });
@@ -1193,22 +1371,26 @@
     var nDays = Object.keys(foodDays).length;
     var avg = function (k) { return nDays ? Object.keys(foodDays).reduce(function (a, d) { return a + foodDays[d][k]; }, 0) / nDays : 0; };
 
-    var ws = weightsAsc();
+    // Peso al final de la semana que se está mirando.
+    var ws = weightsAsc().filter(function (w) { return w.date <= end; });
     var last = ws[ws.length - 1];
     var weightCard;
+    var weightLabel = thisWeek ? 'Peso actual' : 'Peso de esa semana';
     if (last) {
       var ref = ws.filter(function (w) { return w.date <= addDays(last.date, -7); }).pop();
       var diff = ref ? last.kg - ref.kg : null;
-      weightCard = stat('Peso actual', fmtNum(last.kg, 1) + ' kg',
-        diff == null ? fmtDate(last.date) : (diff > 0 ? '+' : '') + fmtNum(diff, 1) + ' kg vs. hace una semana');
+      weightCard = stat(weightLabel, fmtNum(last.kg, 1) + ' kg',
+        diff == null ? fmtDate(last.date) : (diff > 0 ? '+' : '') + fmtNum(diff, 1) + ' kg vs. 7 días antes');
     } else {
-      weightCard = stat('Peso actual', '—', 'sin registros');
+      weightCard = stat(weightLabel, '—', 'sin registros');
     }
 
     $('#summary-cards').innerHTML =
       stat('Gimnasio', gym.length, gym.length === 1 ? 'sesión' : 'sesiones') +
       stat('Tatami', mat.length, (mat.length === 1 ? 'clase' : 'clases') + ' · ' + fmtNum(matMin / 60, 1) + ' h · ' + matRolls + ' rolls') +
-      stat('Calorías / día', nDays ? fmtNum(avg('kcal')) : '—', nDays ? 'promedio de ' + nDays + (nDays === 1 ? ' día' : ' días') + ' · meta ' + fmtNum(data.goals.kcal) : 'sin comidas esta semana') +
+      (sports.length ? stat('Otros deportes', sports.length, fmtNum(sportMin / 60, 1) + ' h · ' +
+        esc(sports.map(function (m) { return m.type; }).filter(function (v, i, a) { return a.indexOf(v) === i; }).join(', '))) : '') +
+      stat('Calorías / día', nDays ? fmtNum(avg('kcal')) : '—', nDays ? 'promedio de ' + nDays + (nDays === 1 ? ' día' : ' días') + ' · meta ' + fmtNum(data.goals.kcal) : 'sin comidas esa semana') +
       stat('Proteína / día', nDays ? fmtNum(avg('protein')) + ' g' : '—', nDays ? 'meta ' + fmtNum(data.goals.protein) + ' g' : '') +
       weightCard;
 

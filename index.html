@@ -23,13 +23,19 @@
     <!-- Resumen -->
     <section id="tab-resumen" class="tab" hidden>
       <div id="summary-belt"></div>
-      <h2>Esta semana</h2>
+      <div class="week-nav">
+        <button type="button" class="icon-btn" id="week-prev" aria-label="Semana anterior">‹</button>
+        <h2 id="week-title">Esta semana</h2>
+        <button type="button" class="icon-btn" id="week-next" aria-label="Semana siguiente">›</button>
+      </div>
       <div id="week-strip" class="week-strip"></div>
       <div class="legend">
         <span><i class="dot gym"></i>Gimnasio</span>
         <span><i class="dot mat"></i>Tatami</span>
-        <span><i class="dot food"></i>Comida registrada</span>
+        <span><i class="dot sport"></i>Otro deporte</span>
+        <span><i class="dot food"></i>Comida</span>
       </div>
+      <div id="day-detail" class="card"></div>
       <div id="summary-cards" class="cards"></div>
       <h2>Para repasar en el tatami</h2>
       <div id="summary-review"></div>
@@ -87,22 +93,26 @@
       </div>
 
       <form id="mat-form" class="card" autocomplete="off">
-        <h2>Nueva clase</h2>
+        <h2 id="mat-form-title">Nueva clase o deporte</h2>
         <div class="row2">
           <label class="field">Fecha<input type="date" name="date" required></label>
           <label class="field">Tipo
             <select name="type">
               <option>BJJ con gi</option>
-              <option>BJJ sin gi</option>
+              <option>NoGi</option>
               <option>Lucha</option>
               <option>Open mat</option>
-              <option>Otro</option>
+              <option value="__otro">Otro deporte…</option>
             </select>
           </label>
         </div>
+        <label class="field" id="mat-other-field" hidden>¿Qué deporte?
+          <input type="text" name="other" list="sport-names" placeholder="ej. trekking, trotar, snowboard">
+        </label>
+        <datalist id="sport-names"></datalist>
         <div class="row2">
           <label class="field">Duración (min)<input type="number" name="minutes" min="0" step="5" value="90" inputmode="numeric"></label>
-          <label class="field">Combates (rolls)<input type="number" name="rolls" min="0" step="1" value="0" inputmode="numeric"></label>
+          <label class="field" id="mat-rolls-field">Combates (rolls)<input type="number" name="rolls" min="0" step="1" value="0" inputmode="numeric"></label>
         </div>
         <label class="field">Técnicas vistas<textarea name="techniques" rows="2" placeholder="ej. raspada de tijera, defensa de derribo"></textarea></label>
         <label class="field">Me salió bien<textarea name="good" rows="2"></textarea></label>
@@ -112,12 +122,14 @@
         </label>
         <label class="field">Lesiones o molestias<input type="text" name="injuries" placeholder="(opcional)"></label>
         <div class="field">Fotos (opcional)
+          <div id="mat-existing-photos" class="photo-picker"><div class="thumbs"></div></div>
           <div class="photo-picker" id="mat-photos">
             <div class="thumbs"></div>
             <label class="btn small">📷 Agregar fotos<input type="file" accept="image/*" multiple hidden></label>
           </div>
         </div>
-        <button type="submit" class="btn primary">Guardar clase</button>
+        <button type="submit" class="btn primary" id="mat-submit">Guardar</button>
+        <button type="button" class="btn small" id="mat-cancel" hidden>Cancelar edición</button>
       </form>
       <div id="mat-stats" class="cards"></div>
       <h2>Historial</h2>
